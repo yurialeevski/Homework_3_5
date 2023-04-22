@@ -1,126 +1,87 @@
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class EmployeeDAOImpl implements EmployeeDAO {
-    //final String user = "postgres";
-    //final String password = "ya030423";
-    //final String url = "jdbc:postgresql://localhost:5432/skypro";
-    final Connection connection;
+    public EmployeeDAOImpl() {
 
-    public EmployeeDAOImpl(Connection connection) {
-        this.connection = connection;
     }
 
     @Override
-    public void createEmployee(String inputFirstName, String inputLastName, String inputGender, int inputAge, int inputCityId) {
-        /*String insertString = "INSERT INTO employee(first_name, last_name, gender, age, city_id) VALUES (" +
-                "'" + inputFirstName + "'," +
-                "'" + inputLastName + "'," +
-                "'" + inputGender + "'," +
-                inputAge + "," +
-                inputCityId + ")";*/
-        String insertString = "INSERT INTO employee(first_name, last_name, gender, age, city_id) " +
-                                "VALUES (?, ?, ?, ?, ?)";
+    public void createEmployee(EntityManager entityManager, String firstName, String lastName, String gender, int age, int cityId) {
+        Employee employee = new Employee();
+        employee.setFirstName(firstName);
+        employee.setLastName(lastName);
+        employee.setGender(gender);
+        employee.setAge(age);
+        employee.setCityId(cityId);
 
-        try (/*final Connection connection =
-                     DriverManager.getConnection(url, user, password);*/
-             PreparedStatement statement =
-                     connection.prepareStatement(insertString)) {
-            statement.setString(1, inputFirstName);
-            statement.setString(2, inputLastName);
-            statement.setString(3, inputGender);
-            statement.setInt(4, inputAge);
-            statement.setInt(5, inputCityId);
-
-            statement.executeUpdate();
-            System.out.println("Добавлен новый сотрудник: " + inputLastName);
-        } catch (SQLException e) {
-            System.out.println("Ошибка при подключении к базе данных!");
-            e.printStackTrace();
-        }
+        entityManager.getTransaction().begin();
+        entityManager.persist(employee);
+        entityManager.getTransaction().commit();
     }
 
     @Override
-    public List<Employee> getAllEmployees() {
+    public List<Employee> getAllEmployees(EntityManager entityManager) {
         List<Employee> employees = new ArrayList<>();
 
-        try (/*final Connection connection =
-                     DriverManager.getConnection(url, user, password);*/
-             PreparedStatement statement =
-                     connection.prepareStatement("SELECT * FROM employee")) {
-            ResultSet resultSet = statement.executeQuery();
-            while (resultSet.next()) {
-                int idOfEmployee = resultSet.getInt("id");
-                String firstName = resultSet.getString("first_name");
-                String lastName = resultSet.getString("last_name");
-                String gender = resultSet.getString("gender");
-                int age = resultSet.getInt("age");
-                int cityId = resultSet.getInt("city_id");
-                employees.add(new Employee(idOfEmployee, firstName, lastName, gender, age, cityId));
-            }
-        } catch (SQLException e) {
-            System.out.println("Ошибка при подключении к базе данных!");
-            e.printStackTrace();
-        }
+        //EntityManager entityManager = JPAUtility.getEntityManager();
+
+        // Начинаем транзакцию
+        entityManager.getTransaction().begin();
+
+        // Создаем JPQL-запрос для выборки всех служащих
+        String jpqlQuery = "SELECT e FROM Employee e";
+
+        // Создаем объект запроса с указанием типа возвращаемого результата
+        // (Employee.class)
+        TypedQuery<Employee> query = entityManager.createQuery(jpqlQuery, Employee.class);
+
+        // Выполняем запрос и получаем результат в виде списка сотрудников
+        employees = query.getResultList();
+
+        // Завершаем транзакцию
+        entityManager.getTransaction().commit();
+
+        //entityManager.close();
+        //JPAUtility.close();
         return employees;
     }
 
     @Override
-    public Employee getEmployeeById(int id) {
+    public Employee getEmployeeById(EntityManager entityManager, int id) {
         Employee employee = null;
-        try (/*final Connection connection =
-             DriverManager.getConnection(url, user, password);*/
-             PreparedStatement statement =
-                     connection.prepareStatement("SELECT * FROM employee WHERE id = " + id)) {
-            ResultSet resultSet = statement.executeQuery();
-            resultSet.next();
-                int idOfEmployee = resultSet.getInt("id");
-                String firstName = resultSet.getString("first_name");
-                String lastName = resultSet.getString("last_name");
-                String gender = resultSet.getString("gender");
-                int age = resultSet.getInt("age");
-                int cityId = resultSet.getInt("city_id");
-                employee = new Employee(idOfEmployee, firstName, lastName, gender, age, cityId);
-        } catch (SQLException e) {
-            System.out.println("Ошибка при подключении к базе данных!");
-            e.printStackTrace();
-        }
+        entityManager.getTransaction().begin();
+        employee = entityManager.find(Employee.class, new Integer(id));
+        entityManager.getTransaction().commit();
         return employee;
     }
 
     @Override
-    public void updateEmployeeById(int id, String inputFirstName, String inputLastName, String inputGender, int inputAge, int inputCityId) {
-        String queryString = "UPDATE employee SET " +
-                "first_name = " + "'" + inputFirstName + "'," +
-                "last_name = " + "'" + inputLastName + "'," +
-                "gender = " + "'" + inputGender + "'," +
-                "age = " + inputAge + "," +
-                "city_id = " + inputCityId + "WHERE id = " + id;
-
-        try (/*final Connection connection =
-                     DriverManager.getConnection(url, user, password);*/
-             PreparedStatement statement =
-                     connection.prepareStatement(queryString)) {
-            statement.executeUpdate();
-            System.out.println("Сотружник " + id + " изменен на " + inputLastName);
-        } catch (SQLException e) {
-            System.out.println("Ошибка при подключении к базе данных!");
-            e.printStackTrace();
+    public void updateEmployeeById(EntityManager entityManager, int id, Employee employee) {
+        entityManager.getTransaction().begin();
+        Employee employeeCheck = entityManager.find(Employee.class, new Integer(id));
+        if(entityManager.contains(employeeCheck)) {
+            entityManager.merge(employee);
+            System.out.println("Сотрудник ID: " + id + " обновлен");
+        } else {
+            System.out.println("Сотрудник с ID: " + id + " не найден в базе данных");
         }
+        entityManager.getTransaction().commit();
     }
 
     @Override
-    public void deleteEmployeeById(int id) {
-        try (/*final Connection connection =
-                     DriverManager.getConnection(url, user, password);*/
-             PreparedStatement statement =
-                     connection.prepareStatement("DELETE FROM employee WHERE id = " + id)) {
-            statement.executeUpdate();
-            System.out.println("Удален сотрудник с id: " + id);
-        } catch (SQLException e) {
-            System.out.println("Ошибка при подключении к базе данных!");
-            e.printStackTrace();
+    public void deleteEmployeeById(EntityManager entityManager, int id, Employee employee) {
+        entityManager.getTransaction().begin();
+        Employee employeeCheck = entityManager.find(Employee.class, new Integer(id));
+        if(entityManager.contains(employeeCheck)) {
+            entityManager.remove(employee);
+            System.out.println("Сотрудник ID: " + id + " удален");
+        } else {
+            System.out.println("Сотрудник с ID: " + id + " не найден в базе данных");
         }
+        entityManager.getTransaction().commit();
     }
 }

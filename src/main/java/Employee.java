@@ -1,10 +1,25 @@
+import javax.persistence.*;
+
+@Entity
+@Table(name = "employee")
 public class Employee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private int id;
+    @Column(name = "first_name", length = 50, nullable = false)
     private String firstName;
+    @Column(name = "last_name", length = 50, nullable = false)
     private String lastName;
+    @Column(name = "gender", length = 6, nullable = false)
     private String gender;
+    @Column(name = "age", nullable = false)
     private int age;
+    @Column(name = "city_id", nullable = true)
     private int cityId;
+
+    public Employee() {
+    }
 
     public Employee(int id, String firstName, String lastName, String gender, int age, int cityId) {
         this.id = id;
